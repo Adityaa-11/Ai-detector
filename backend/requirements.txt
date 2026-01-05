@@ -4,17 +4,14 @@ uvicorn==0.27.1
 pydantic>=2.0.0
 python-multipart>=0.0.6
 
-# PyTorch (version required by SuperAnnotate)
-torch==2.2.1
+# PyTorch CPU-only (smaller footprint)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.2.0+cpu
 
-# AI Detection - Use transformers compatible with torch 2.2
+# AI Detection (minimal)
 transformers==4.38.2
-sentence-transformers==2.5.1
 
-# SuperAnnotate Detector (85%+ accuracy on GPT-4/Claude)
-git+https://github.com/superannotateai/generated_text_detector.git@v1.1.0
-
-# NumPy 1.x (required for compatibility)
+# NumPy
 numpy==1.25.2
 
 # Text Processing

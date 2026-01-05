@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from 'next/server'
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000'
 
 export async function POST(request: NextRequest) {
+  console.log('[API] BACKEND_URL:', BACKEND_URL)
+  
   try {
     const body = await request.json()
     
@@ -25,8 +27,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const targetUrl = `${BACKEND_URL}/api/detect`
+    console.log('[API] Calling backend:', targetUrl)
+
     // Call the Python backend
-    const response = await fetch(`${BACKEND_URL}/api/detect`, {
+    const response = await fetch(targetUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -39,62 +44,39 @@ export async function POST(request: NextRequest) {
       }),
     })
 
+    console.log('[API] Backend response status:', response.status)
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
+      const errorText = await response.text()
+      console.error('[API] Backend error:', errorText)
       return NextResponse.json(
-        { error: errorData.detail || 'Detection failed' },
+        { error: `Backend error: ${response.status}`, details: errorText },
         { status: response.status }
       )
     }
 
     const data = await response.json()
+    console.log('[API] Success, returning data')
     return NextResponse.json(data)
     
-  } catch (error) {
-    console.error('Detection API error:', error)
+  } catch (error: any) {
+    console.error('[API] Error:', error.message, error.stack)
     
-    // Check if backend is unreachable
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      return NextResponse.json(
-        { 
-          error: 'Backend service unavailable. Please ensure the Python backend is running on port 8000.',
-          hint: 'Run: cd backend && uvicorn api:app --reload'
-        },
-        { status: 503 }
-      )
-    }
-    
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function GET() {
-  try {
-    // Health check proxy
-    const response = await fetch(`${BACKEND_URL}/api/health`)
-    
-    if (!response.ok) {
-      return NextResponse.json(
-        { status: 'backend_error', backend_url: BACKEND_URL },
-        { status: response.status }
-      )
-    }
-    
-    const data = await response.json()
-    return NextResponse.json(data)
-    
-  } catch {
     return NextResponse.json(
       { 
-        status: 'backend_unavailable',
-        backend_url: BACKEND_URL,
-        message: 'Python backend is not running'
+        error: 'Failed to connect to backend',
+        details: error.message,
+        backend_url: BACKEND_URL
       },
       { status: 503 }
     )
   }
 }
 
+export async function GET() {
+  return NextResponse.json({
+    status: 'ok',
+    backend_url: BACKEND_URL,
+    message: 'Use POST to detect AI content'
+  })
+}
