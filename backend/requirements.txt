@@ -4,12 +4,15 @@ uvicorn==0.27.1
 pydantic>=2.0.0
 python-multipart>=0.0.6
 
-# PyTorch (2.6+ required for security)
+# PyTorch
 torch>=2.6.0
 
-# AI Detection Models (compatible versions)
+# AI Detection Models
 transformers>=4.50.0
 sentence-transformers>=2.2.0
+
+# SuperAnnotate Detector (85%+ accuracy on GPT-4/Claude)
+git+https://github.com/superannotateai/generated_text_detector.git@v1.1.0
 
 # NumPy 1.x (required for compatibility)
 numpy<2.0
