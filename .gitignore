@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+backend/venv/
+__pycache__/
+*.pyc
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Build
+.next/
+out/
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Cache
+.cache/
+*.cache
+
+# Hugging Face models (will be downloaded on Railway)
+backend/*.pt
+backend/*.bin
