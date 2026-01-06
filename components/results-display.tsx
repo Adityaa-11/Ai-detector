@@ -21,6 +21,8 @@ export function ResultsDisplay({ result }: ResultsDisplayProps) {
         return "text-red-500"
       case "Likely AI":
         return "text-orange-500"
+      case "Mixed AI & Human":
+        return "text-purple-500"
       case "Uncertain":
         return "text-yellow-500"
       case "Likely Human":
@@ -120,6 +122,30 @@ export function ResultsDisplay({ result }: ResultsDisplayProps) {
               </p>
             </div>
           </div>
+
+          {/* Sentence breakdown if available */}
+          {result.sentences && result.sentences.length > 0 && (
+            <div className="grid grid-cols-3 gap-4 text-center border-t pt-4">
+              <div>
+                <p className="text-2xl font-bold text-red-500">
+                  {result.sentences.filter((s: SentenceHighlight) => s.ai_probability > 0.55).length}
+                </p>
+                <p className="text-xs text-muted-foreground">AI Sentences</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-yellow-500">
+                  {result.sentences.filter((s: SentenceHighlight) => s.ai_probability >= 0.45 && s.ai_probability <= 0.55).length}
+                </p>
+                <p className="text-xs text-muted-foreground">Uncertain</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-green-500">
+                  {result.sentences.filter((s: SentenceHighlight) => s.ai_probability < 0.45).length}
+                </p>
+                <p className="text-xs text-muted-foreground">Human Sentences</p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4 text-sm border-t pt-4">
             <div className="flex items-center justify-between">

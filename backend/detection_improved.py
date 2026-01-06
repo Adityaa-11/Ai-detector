@@ -89,14 +89,15 @@ class LightweightDetector:
     
     def detect_sentences(self, text: str) -> List[Dict]:
         """Sentence-level detection for highlighting."""
-        sentences = re.split(r'(?<=[.!?])\s+', text)
-        sentences = [s.strip() for s in sentences if len(s.split()) >= 5]
+        # Split into sentences more carefully
+        sentences = self._split_sentences(text)
         
         results = []
         for sent in sentences:
             word_count = len(sent.split())
             
-            if word_count < 10:
+            # Skip very short sentences
+            if word_count < 5:
                 results.append({
                     "sentence": sent,
                     "ai_probability": 0.5,
@@ -117,11 +118,12 @@ class LightweightDetector:
                 
                 results.append({
                     "sentence": sent,
-                    "ai_probability": round(ai_prob, 2),
+                    "ai_probability": round(ai_prob, 3),
                     "is_ai": ai_prob > 0.5,
                     "color": self._get_color(ai_prob)
                 })
-            except:
+            except Exception as e:
+                print(f"[Detector] Sentence error: {e}")
                 results.append({
                     "sentence": sent,
                     "ai_probability": 0.5,
@@ -130,6 +132,26 @@ class LightweightDetector:
                 })
         
         return results
+    
+    def _split_sentences(self, text: str) -> List[str]:
+        """Split text into sentences, preserving meaningful chunks."""
+        # Split on sentence-ending punctuation
+        raw_sentences = re.split(r'(?<=[.!?])\s+', text)
+        
+        sentences = []
+        for sent in raw_sentences:
+            sent = sent.strip()
+            if sent and len(sent) > 10:  # Skip tiny fragments
+                sentences.append(sent)
+        
+        # If no sentences found, split by newlines or return as-is
+        if not sentences:
+            sentences = [s.strip() for s in text.split('\n') if s.strip() and len(s.strip()) > 10]
+        
+        if not sentences:
+            sentences = [text]
+        
+        return sentences
     
     def _chunk_text(self, text: str, max_words: int = 400) -> List[str]:
         words = text.split()
@@ -163,11 +185,11 @@ class LightweightDetector:
     
     def _get_color(self, ai_prob: float) -> str:
         if ai_prob > 0.65:
-            return "#FF6B6B"
+            return "#FF6B6B"  # Red - AI
         elif ai_prob > 0.45:
-            return "#FFE66D"
+            return "#FFE66D"  # Yellow - Uncertain
         else:
-            return "#4ECDC4"
+            return "#4ECDC4"  # Green - Human
 
 
 # ============================================================
@@ -212,18 +234,66 @@ class HybridDetector:
         }
     
     def detect_with_highlights(self, text: str) -> Dict:
-        overall = self.detect(text)
+        """Detect AI content with sentence-level highlighting and mixed detection."""
+        # Get sentence-level results
         sentences = self.detector.detect_sentences(text)
+        
+        # Calculate statistics from sentences
+        if sentences:
+            ai_probs = [s["ai_probability"] for s in sentences]
+            ai_sentences = sum(1 for s in sentences if s["ai_probability"] > 0.55)
+            human_sentences = sum(1 for s in sentences if s["ai_probability"] < 0.45)
+            uncertain_sentences = len(sentences) - ai_sentences - human_sentences
+            
+            # Overall AI probability based on sentence analysis
+            overall_ai_prob = float(np.mean(ai_probs)) if ai_probs else 0.5
+            
+            # Determine if content is "Mixed"
+            total = len(sentences)
+            ai_ratio = ai_sentences / total if total > 0 else 0
+            human_ratio = human_sentences / total if total > 0 else 0
+            
+            # Mixed detection logic
+            if ai_ratio >= 0.2 and human_ratio >= 0.2:
+                # Both AI and human content present in significant amounts
+                verdict = "Mixed AI & Human"
+                confidence = "medium"
+            elif overall_ai_prob > 0.75:
+                verdict = "AI Generated"
+                confidence = "high" if overall_ai_prob > 0.85 else "medium"
+            elif overall_ai_prob > 0.55:
+                verdict = "Likely AI"
+                confidence = "medium" if overall_ai_prob > 0.65 else "low"
+            elif overall_ai_prob > 0.45:
+                verdict = "Uncertain"
+                confidence = "low"
+            elif overall_ai_prob > 0.25:
+                verdict = "Likely Human"
+                confidence = "medium" if overall_ai_prob < 0.35 else "low"
+            else:
+                verdict = "Human Written"
+                confidence = "high" if overall_ai_prob < 0.15 else "medium"
+        else:
+            # Fallback to overall detection
+            overall_result = self.detect(text)
+            overall_ai_prob = overall_result.get("ai_probability", 0.5)
+            verdict = overall_result.get("verdict", "Unknown")
+            confidence = overall_result.get("confidence", "low")
+            ai_sentences = 0
+            human_sentences = 0
         
         return {
             "overall": {
-                "ai_probability": overall.get("ai_probability", 0.5),
-                "human_probability": overall.get("human_probability", 0.5),
-                "verdict": overall.get("verdict", "Unknown"),
-                "confidence": overall.get("confidence", "low")
+                "ai_probability": round(overall_ai_prob, 4),
+                "human_probability": round(1 - overall_ai_prob, 4),
+                "verdict": verdict,
+                "confidence": confidence,
+                "ai_sentences": ai_sentences if sentences else 0,
+                "human_sentences": human_sentences if sentences else 0,
+                "total_sentences": len(sentences) if sentences else 0
             },
             "sentences": sentences,
-            "word_count": overall.get("word_count", len(text.split()))
+            "word_count": len(text.split())
         }
     
     def get_stats(self) -> Dict:
@@ -296,11 +366,13 @@ class PlagiarismDetector:
     
     def compare_texts(self, text1: str, text2: str) -> Dict:
         """Compare two texts for similarity."""
+        from sklearn.feature_extraction.text import TfidfVectorizer
         from sklearn.metrics.pairwise import cosine_similarity
         
-        # Fit on both texts temporarily
-        tfidf_temp = self.tfidf.fit_transform([text1, text2])
-        similarity = cosine_similarity(tfidf_temp[0:1], tfidf_temp[1:2])[0][0]
+        # Create a fresh vectorizer for comparison
+        tfidf_temp = TfidfVectorizer(ngram_range=(1, 3), stop_words='english')
+        tfidf_matrix = tfidf_temp.fit_transform([text1, text2])
+        similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
         
         return {
             "similarity": round(float(similarity), 4),
