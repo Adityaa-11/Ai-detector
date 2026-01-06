@@ -4,14 +4,13 @@ uvicorn==0.27.1
 pydantic>=2.0.0
 python-multipart>=0.0.6
 
-# PyTorch CPU-only (smaller footprint)
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.2.0+cpu
+# PyTorch - let pip resolve the best version
+torch>=2.0.0,<2.3.0
 
-# AI Detection (minimal)
+# AI Detection
 transformers==4.38.2
 
-# NumPy
+# NumPy (pinned for compatibility)
 numpy==1.25.2
 
 # Text Processing

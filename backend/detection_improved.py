@@ -293,3 +293,17 @@ class PlagiarismDetector:
             "is_plagiarized": max_score > threshold,
             "matches": matches[:10]
         }
+    
+    def compare_texts(self, text1: str, text2: str) -> Dict:
+        """Compare two texts for similarity."""
+        from sklearn.metrics.pairwise import cosine_similarity
+        
+        # Fit on both texts temporarily
+        tfidf_temp = self.tfidf.fit_transform([text1, text2])
+        similarity = cosine_similarity(tfidf_temp[0:1], tfidf_temp[1:2])[0][0]
+        
+        return {
+            "similarity": round(float(similarity), 4),
+            "similarity_percentage": round(float(similarity) * 100, 1),
+            "is_similar": similarity > 0.3
+        }
