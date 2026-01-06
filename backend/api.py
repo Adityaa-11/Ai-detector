@@ -110,17 +110,14 @@ async def startup():
     print("=" * 60)
     
     try:
-        # Use the IMPROVED detection with SuperAnnotate model
-        # Trained on GPT-4, Claude, Mistral - 85%+ accuracy
+        # Lightweight detector for low memory environments
         from detection_improved import HybridDetector, PlagiarismDetector
         
-        print("\n📦 Loading AI detector (SuperAnnotate - trained on GPT-4/Claude/Mistral)...")
-        ai_detector = HybridDetector(
-            gptzero_api_key=None  # Set your GPTZero API key here for 96%+ accuracy
-        )
+        print("\n📦 Loading AI detector (Lightweight RoBERTa)...")
+        ai_detector = HybridDetector()
         print("✅ AI detector loaded!")
         
-        print("\n📦 Loading plagiarism detector...")
+        print("\n📦 Loading plagiarism detector (TF-IDF only)...")
         plagiarism_detector = PlagiarismDetector()
         print("✅ Plagiarism detector loaded!")
         
