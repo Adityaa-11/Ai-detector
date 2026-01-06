@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000'
+// Remove trailing slash if present to prevent double-slash issues
+const BACKEND_URL = (process.env.BACKEND_URL || 'http://localhost:8000').replace(/\/+$/, '')
 
 export async function POST(request: NextRequest) {
   try {
